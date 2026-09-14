@@ -454,7 +454,8 @@ struct SettingsView: View {
               set: { newValue in
                 UserSettings.sleepIdleTime = newValue
                 sleepIdleTime = newValue
-              })
+              }),
+            isDebugOnly: { $0.isDebugOnly }
           )
         }
       }
@@ -976,6 +977,9 @@ struct SettingsView: View {
 struct PillPicker<Option: Hashable>: View {
   let options: [(value: Option, label: String)]
   @Binding var selection: Option
+  /// Marks options that only exist in DEBUG builds; they're tinted orange so
+  /// they're recognizable at a glance without taking extra space
+  var isDebugOnly: (Option) -> Bool = { _ in false }
 
   private var selectedIdx: Int {
     options.firstIndex { $0.value == selection } ?? 0
@@ -999,7 +1003,10 @@ struct PillPicker<Option: Hashable>: View {
             // All segments use primary text -- dimming the unselected ones
             // reads as disabled; the thumb alone marks the selection (matches
             // native segmented controls)
-            .foregroundStyle(Color(nsColor: Theme.Colors.textPrimary))
+            // (debug-only options are the exception -- orange flags them)
+            .foregroundStyle(
+              isDebugOnly(option.value)
+                ? Color.orange : Color(nsColor: Theme.Colors.textPrimary))
             .padding(.horizontal, 6)
             .padding(.vertical, 1)
             .background(

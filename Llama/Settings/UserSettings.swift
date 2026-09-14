@@ -25,6 +25,15 @@ enum UserSettings {
       case .disabled: return "Off"
       }
     }
+
+    /// Whether this option only exists in DEBUG builds (flagged in the UI)
+    var isDebugOnly: Bool {
+      #if DEBUG
+        return self == .thirtySec
+      #else
+        return false
+      #endif
+    }
   }
 
   private enum Keys {
