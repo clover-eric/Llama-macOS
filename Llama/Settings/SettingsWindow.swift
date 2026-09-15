@@ -369,8 +369,34 @@ struct ServerCommandView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
           .fixedSize(horizontal: false, vertical: true)
       }
+
+      // The server's log sits next to the command that produces it. Opened in
+      // Console.app rather than an in-app viewer: Console already follows the
+      // file live and has search, so there's nothing to build or maintain.
+      Section {
+        SettingRow(
+          title: "Server log",
+          description: "Output from the current server session."
+        ) {
+          Button("Open") { openServerLog() }
+            .font(.callout)
+            .controlSize(.small)
+        }
+      }
     }
     .formStyle(.grouped)
+  }
+
+  /// Opens the log in Console.app specifically -- the default app for `.log`
+  /// can be a text editor, which shows a snapshot that doesn't update. Falls
+  /// back to the default app if Console can't be found.
+  private func openServerLog() {
+    let log = URL(fileURLWithPath: LlamaServer.logFilePath)
+    if let console = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Console") {
+      NSWorkspace.shared.open([log], withApplicationAt: console, configuration: NSWorkspace.OpenConfiguration())
+    } else {
+      NSWorkspace.shared.open(log)
+    }
   }
 
   /// The shell command that starts the server, built from the current

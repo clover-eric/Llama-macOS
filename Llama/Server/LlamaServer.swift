@@ -364,9 +364,18 @@ class LlamaServer {
   /// An empty dir pointed at by `LLAMA_CACHE` to suppress router mode's
   /// automatic model discovery. Without it, llama-server scans the cache and
   /// lists every GGUF it finds; we manage the model list ourselves via
-  /// `--models-preset`. A fixed `/tmp` path keeps the rendered command short
-  /// (and matches where we put `--log-file`).
+  /// `--models-preset`. A fixed `/tmp` path keeps the rendered command short.
   nonisolated static let emptyCachePath = "/tmp/llama-empty-cache"
+
+  /// Where the server writes its log (`--log-file`). `~/Library/Logs/<App>` is
+  /// the macOS convention for app logs, and Console.app lists `.log` files there
+  /// under Log Reports, so users can find it without the Settings button. Named
+  /// like `appSupportDir`, so dev and production builds share it the same way.
+  /// llama.cpp truncates the file on every start, so it only ever holds the
+  /// current server session.
+  nonisolated static let logFilePath = FileManager.default
+    .urls(for: .libraryDirectory, in: .userDomainMask)[0]
+    .appendingPathComponent("Logs/Llama/llama-server.log").path
 
   /// Builds the `llama serve` launch spec from the current settings. Pure with
   /// respect to process state -- it only reads settings and the resolved binary
@@ -392,7 +401,7 @@ class LlamaServer {
       "serve",
       // Path flags, grouped together.
       "--models-preset", presetsPath,
-      "--log-file", "/tmp/llama-server.log",
+      "--log-file", Self.logFilePath,
       // Other value-taking flags.
       "--port", String(Self.port),
       "--models-max", "1",
@@ -564,6 +573,11 @@ class LlamaServer {
     // Ensure the empty-cache dir referenced by LLAMA_CACHE exists.
     try? FileManager.default.createDirectory(
       atPath: Self.emptyCachePath, withIntermediateDirectories: true)
+    // llama.cpp opens `--log-file` with `fopen`, which won't create missing
+    // folders -- without this the server runs but silently writes no log.
+    try? FileManager.default.createDirectory(
+      atPath: (Self.logFilePath as NSString).deletingLastPathComponent,
+      withIntermediateDirectories: true)
 
     // All paths in models.ini are absolute, so CWD is mostly cosmetic —
     // but point it at Application Support so stray relative writes (if any) don't leak into $HOME.
